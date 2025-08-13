@@ -82,8 +82,6 @@ cd frontend
 npm start
 ```
 
-Visit `http://localhost:3001` to use the application!
-
 ## 🔐 Security & Environment Variables
 
 ### Important Security Notes
@@ -95,12 +93,6 @@ Visit `http://localhost:3001` to use the application!
 ```bash
 OPENAI_API_KEY=your_openai_api_key_here
 ```
-
-### Getting Your OpenAI API Key
-1. Visit [OpenAI Platform](https://platform.openai.com/api-keys)
-2. Create a new API key
-3. Copy the key to your `.env` file
-4. Keep it secure and never share it
 
 ## 🏗️ Architecture
 
@@ -145,63 +137,3 @@ enoxify/
 ├── env_template.txt         # Environment template
 └── README.md               # This file
 ```
-
-## 🧪 Testing
-
-### Backend Testing
-```bash
-cd backend
-source venv/bin/activate
-python -m pytest
-```
-
-### Frontend Testing
-```bash
-cd frontend
-npm test
-```
-
-## 🚀 Deployment
-
-### Backend Deployment
-- **Docker**: Use the provided Dockerfile
-- **Cloud Platforms**: Deploy to Heroku, Railway, or AWS
-- **Environment Variables**: Set `OPENAI_API_KEY` in your deployment platform
-
-### Frontend Deployment
-- **Build**: `npm run build`
-- **Static Hosting**: Deploy to Vercel, Netlify, or GitHub Pages
-- **Environment**: Update API endpoints for production
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **OpenAI** for providing powerful AI APIs
-- **Google** for Text-to-Speech services
-- **FastAPI** for the excellent web framework
-- **React** for the amazing frontend library
-- **Three.js** for 3D graphics capabilities
-
-## 📞 Support
-
-If you have any questions or need help:
-- Create an issue on GitHub
-- Check the documentation
-- Review the code examples
-
----
-
-**Made with ❤️ by the Enoxify Team**
-
-*Empowering accessibility through AI innovation*
