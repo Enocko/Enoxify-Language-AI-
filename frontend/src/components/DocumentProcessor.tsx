@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Upload, Download, Clock, TrendingUp } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface DocumentResult {
   original_format: string;
@@ -11,6 +12,7 @@ interface DocumentResult {
 }
 
 const DocumentProcessor: React.FC = () => {
+  const { token } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<DocumentResult | null>(null);
@@ -45,6 +47,9 @@ const DocumentProcessor: React.FC = () => {
 
       const response = await fetch('http://localhost:8000/process-document', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
 

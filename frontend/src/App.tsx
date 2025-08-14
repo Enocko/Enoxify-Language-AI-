@@ -4,7 +4,7 @@ import TextSimplifier from './components/TextSimplifier';
 import TextToSpeech from './components/TextToSpeech';
 import SpeechToText from './components/SpeechToText';
 import DocumentProcessor from './components/DocumentProcessor';
-import { DemoOne } from './components/ui/demo';
+import { Scene as RubiksCube } from './components/ui/rubiks-cube';
 
 function App() {
   const [activeSection, setActiveSection] = useState('text-simplifier');
@@ -29,7 +29,7 @@ function App() {
     <div className="min-h-screen relative flex flex-col bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
       {/* 3D Background */}
       <div className="fixed inset-0 z-0 opacity-80">
-        <DemoOne />
+        <RubiksCube />
       </div>
       
       {/* Content Overlay */}

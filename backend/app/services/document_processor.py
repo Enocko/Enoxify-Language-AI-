@@ -80,26 +80,13 @@ class DocumentProcessor:
                 tts = TextToSpeech()
                 tts_result = await tts.convert(extracted_text, "neutral", 1.0, "en-US")
                 
-                # Handle new TTS return format
+                # Handle new TTS return format - now returns just filename
                 if isinstance(tts_result, dict):
-                    original_audio_path = tts_result["audio_file_path"]
+                    # TTS service now saves directly to temp directory and returns filename
+                    result["audio_file_path"] = tts_result["audio_file_path"]
                 else:
-                    original_audio_path = tts_result
-                
-                # Copy the generated audio file to the temp directory for consistent file management
-                import shutil
-                import uuid
-                temp_audio_filename = f"audio_{uuid.uuid4()}.mp3"
-                temp_audio_path = os.path.join("temp", temp_audio_filename)
-                
-                # Ensure temp directory exists
-                os.makedirs("temp", exist_ok=True)
-                
-                # Copy the file
-                shutil.copy2(original_audio_path, temp_audio_path)
-                
-                # Return the relative path that works with the download endpoint
-                result["audio_file_path"] = temp_audio_filename
+                    # Fallback for old format
+                    result["audio_file_path"] = tts_result
                     
                 result["output_formats"].append("audio")
             

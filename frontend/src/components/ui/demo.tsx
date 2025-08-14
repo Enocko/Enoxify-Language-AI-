@@ -1,13 +1,8 @@
-import { Scene } from "./rubiks-cube";
+import { Hero } from "./helix-hero";
 
-const DemoOne = () => {
-  return (
-    <div className="h-screen w-screen relative flex flex-col justify-center items-center">
-      <div className="absolute inset-0">
-        <Scene />
-      </div>
-    </div>
-  );
-};
-
-export { DemoOne }; 
+export default function DemoOne() {
+  return <Hero
+    title="Welcome to Enoxify"
+    description="Experience the future of AI-powered accessibility. Transform text, speech, and documents with cutting-edge technology."
+  />;
+} 

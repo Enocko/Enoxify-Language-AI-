@@ -1,6 +1,7 @@
 import os
 import tempfile
 import time
+import uuid
 from typing import Optional
 from gtts import gTTS
 import openai
@@ -60,18 +61,22 @@ class TextToSpeech:
                 # Other languages
                 tts = gTTS(text=text, lang=lang_code, slow=False)
             
-            # Create temporary file
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-            temp_file.close()
+            # Create temp directory if it doesn't exist
+            temp_dir = "temp"
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            # Create unique filename in temp directory
+            temp_filename = f"speech_{uuid.uuid4().hex[:8]}.mp3"
+            temp_file_path = os.path.join(temp_dir, temp_filename)
             
             # Generate speech
-            tts.save(temp_file.name)
+            tts.save(temp_file_path)
             
             print(f"gTTS generated audio for {language} in {time.time() - start_time:.2f}s")
             
             # Return both original and translated text for frontend display
             return {
-                "audio_file_path": temp_file.name,
+                "audio_file_path": temp_filename,  # Return just the filename, not full path
                 "original_text": original_text,
                 "translated_text": text if text != original_text else None,
                 "language": language

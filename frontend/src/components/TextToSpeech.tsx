@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Download, Play, Pause } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TTSResult {
   audio_file_path: string;
@@ -10,6 +11,7 @@ interface TTSResult {
 }
 
 const TextToSpeech: React.FC = () => {
+  const { token } = useAuth();
   const [text, setText] = useState('');
   const [voice, setVoice] = useState('neutral'); // Voice type for backend (male, female, neutral)
   const [selectedVoiceId, setSelectedVoiceId] = useState('us_english'); // New state for dropdown value
@@ -59,6 +61,7 @@ const TextToSpeech: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ 
           text, 

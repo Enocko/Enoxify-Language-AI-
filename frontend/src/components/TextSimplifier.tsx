@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SimplificationResult {
   originalText: string;
@@ -7,6 +8,7 @@ interface SimplificationResult {
 }
 
 const TextSimplifier = () => {
+  const { token } = useAuth();
   const [text, setText] = useState('');
   const [readingLevel, setReadingLevel] = useState('elementary');
   const [result, setResult] = useState<SimplificationResult | null>(null);
@@ -26,6 +28,7 @@ const TextSimplifier = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           text: text.trim(),
