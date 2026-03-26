@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Download, Play, Pause } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../api';
 
 interface TTSResult {
   audio_file_path: string;
@@ -18,6 +19,7 @@ const TextToSpeech: React.FC = () => {
   const [selectedLanguage, setSelectedLanguage] = useState('en-US'); // Language code for backend
   const [speed, setSpeed] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<TTSResult | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioElement = useRef<HTMLAudioElement>(null);
@@ -56,8 +58,9 @@ const TextToSpeech: React.FC = () => {
     console.log('DEBUG: Selected voice ID:', selectedVoiceId);
 
     setIsLoading(true);
+    setError(null);
     try {
-      const response = await fetch('http://localhost:8000/text-to-speech', {
+      const response = await fetch(`${API_BASE_URL}/text-to-speech`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,10 +79,11 @@ const TextToSpeech: React.FC = () => {
         console.log('DEBUG: TTS response:', data);
         setResult(data);
       } else {
-        console.error('TTS request failed');
+        const errorData = await response.json().catch(() => null);
+        setError(errorData?.detail || 'Failed to generate speech');
       }
     } catch (error) {
-      console.error('Error:', error);
+      setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -184,6 +188,12 @@ const TextToSpeech: React.FC = () => {
         </button>
       </form>
 
+      {error && (
+        <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+          {error}
+        </div>
+      )}
+
       {result && (
         <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">Generated Speech</h3>
@@ -211,6 +221,14 @@ const TextToSpeech: React.FC = () => {
                 </p>
               </div>
             )}
+
+            {!result.translated_text && !['en-US', 'en-GB'].includes(result.language) && (
+              <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> Translation was not available for this request, so the audio may sound like English spoken with the selected language accent.
+                </p>
+              </div>
+            )}
             
             <div className="flex items-center justify-between bg-white p-4 rounded-lg border">
               <div className="flex items-center space-x-4">
@@ -227,7 +245,7 @@ const TextToSpeech: React.FC = () => {
               </div>
               
               <a
-                href={`http://localhost:8000/download/${result.audio_file_path}`}
+                href={`${API_BASE_URL}/download/${result.audio_file_path}`}
                 download
                 className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-300 transition-colors"
               >
@@ -239,7 +257,7 @@ const TextToSpeech: React.FC = () => {
           
           <audio
             ref={audioElement}
-            src={`http://localhost:8000/download/${result.audio_file_path}`}
+            src={`${API_BASE_URL}/download/${result.audio_file_path}`}
             onEnded={() => setIsPlaying(false)}
             onPause={() => setIsPlaying(false)}
             onPlay={() => setIsPlaying(true)}

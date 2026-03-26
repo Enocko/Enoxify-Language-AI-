@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Upload, Download, Clock, TrendingUp } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../api';
 
 interface DocumentResult {
   original_format: string;
@@ -21,13 +22,11 @@ const DocumentProcessor: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.type === 'application/pdf' || 
-          selectedFile.name.endsWith('.docx') || 
-          selectedFile.name.endsWith('.doc')) {
+      if (selectedFile.type === 'application/pdf' || selectedFile.name.endsWith('.docx')) {
         setFile(selectedFile);
         setError('');
       } else {
-        setError('Please select a PDF or Word document (.pdf, .docx, .doc)');
+        setError('Please select a PDF or Word document (.pdf, .docx)');
         setFile(null);
       }
     }
@@ -45,7 +44,7 @@ const DocumentProcessor: React.FC = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:8000/process-document', {
+      const response = await fetch(`${API_BASE_URL}/process-document`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -54,7 +53,9 @@ const DocumentProcessor: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorBody = await response.json().catch(() => null);
+        const detail = errorBody?.detail ? ` - ${errorBody.detail}` : '';
+        throw new Error(`HTTP error! status: ${response.status}${detail}`);
       }
 
       const data = await response.json();
@@ -98,7 +99,7 @@ const DocumentProcessor: React.FC = () => {
             <input
               type="file"
               id="documentFile"
-              accept=".pdf,.docx,.doc"
+              accept=".pdf,.docx"
               onChange={handleFileChange}
               className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={isProcessing}
@@ -111,7 +112,7 @@ const DocumentProcessor: React.FC = () => {
             )}
           </div>
           <p className="text-sm text-gray-500 mt-2">
-            Supported formats: PDF, Word documents (.pdf, .docx, .doc)
+            Supported formats: PDF, Word documents (.pdf, .docx)
           </p>
         </div>
 
@@ -186,11 +187,11 @@ const DocumentProcessor: React.FC = () => {
                 <div className="bg-white p-4 rounded-lg border">
                   <div className="flex items-center space-x-4">
                     <audio controls className="flex-1">
-                      <source src={`http://localhost:8000/download/${result.audio_file_path}`} type="audio/mpeg" />
+                      <source src={`${API_BASE_URL}/download/${result.audio_file_path}`} type="audio/mpeg" />
                       Your browser does not support the audio element.
                     </audio>
                     <a 
-                      href={`http://localhost:8000/download/${result.audio_file_path}`}
+                      href={`${API_BASE_URL}/download/${result.audio_file_path}`}
                       download="document_audio.mp3"
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >

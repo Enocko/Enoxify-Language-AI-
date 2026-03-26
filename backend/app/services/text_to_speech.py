@@ -9,6 +9,13 @@ import openai
 class TextToSpeech:
     def __init__(self):
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self._google_translator = None
+        # Optional fallback translation (used when OPENAI_API_KEY is missing/invalid).
+        try:
+            from deep_translator import GoogleTranslator  # type: ignore
+            self._google_translator = GoogleTranslator
+        except Exception:
+            self._google_translator = None
         
     async def convert(self, text: str, voice: str = "neutral", speed: float = 1.0, language: str = "en-US") -> dict:
         """
@@ -87,52 +94,72 @@ class TextToSpeech:
     
     def _map_language_code(self, language: str) -> str:
         """Map language codes to gTTS compatible codes"""
-        language_mapping = {
-            'en-US': 'en',
-            'en-GB': 'en-GB',
-            'es': 'es',
-            'fr': 'fr',
-            'de': 'de'
-        }
-        return language_mapping.get(language, 'en')
+        language = (language or "").strip()
+        if not language:
+            return "en"
+
+        normalized = language.replace("_", "-").lower()
+        # Exact mappings for the cases where we also need a special `tld`.
+        if normalized in ["en-us", "en"]:
+            return "en"
+        if normalized in ["en-gb"]:
+            return "en-GB"
+        if normalized.startswith("es"):
+            return "es"
+        if normalized.startswith("fr"):
+            return "fr"
+        if normalized.startswith("de"):
+            return "de"
+
+        return "en"
     
     async def _translate_text(self, text: str, target_language: str) -> Optional[str]:
         """Translate text to target language using OpenAI"""
         try:
-            if not self.openai_api_key:
-                print("OpenAI API key not available, skipping translation")
-                return None
-            
-            client = openai.OpenAI(api_key=self.openai_api_key)
-            
-            # Map language codes to language names for better translation
-            language_names = {
-                'es': 'Spanish',
-                'fr': 'French',
-                'de': 'German'
-            }
-            
-            target_lang_name = language_names.get(target_language, target_language)
-            
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": f"You are a professional translator. Translate the following text to {target_lang_name}. Maintain the original meaning and tone. Only return the translated text, nothing else."
-                    },
-                    {
-                        "role": "user",
-                        "content": text
+            # 1) Try OpenAI translation (best quality).
+            if self.openai_api_key:
+                try:
+                    client = openai.OpenAI(api_key=self.openai_api_key)
+
+                    language_names = {
+                        "es": "Spanish",
+                        "fr": "French",
+                        "de": "German",
                     }
-                ],
-                temperature=0.1
-            )
+                    target_lang_name = language_names.get(target_language, target_language)
+
+                    response = client.chat.completions.create(
+                        model="gpt-4",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": (
+                                    f"You are a professional translator. Translate the following text to {target_lang_name}. "
+                                    "Maintain the original meaning and tone. Only return the translated text, nothing else."
+                                ),
+                            },
+                            {"role": "user", "content": text},
+                        ],
+                        temperature=0.1,
+                    )
+
+                    translated_text = response.choices[0].message.content.strip()
+                    print(f"Translated text to {target_language}: {translated_text[:50]}...")
+                    return translated_text
+                except Exception as e:
+                    # If the key is invalid/missing, fall back to a non-OpenAI translator.
+                    print(f"OpenAI translation failed, falling back: {e}")
             
-            translated_text = response.choices[0].message.content.strip()
-            print(f"Translated text to {target_language}: {translated_text[:50]}...")
+            # 2) Fallback translation if OpenAI isn't configured/working.
+            if self._google_translator is None:
+                print("No translation provider available (deep_translator not installed).")
+                return None
+
+            translator = self._google_translator(source="auto", target=target_language)
+            translated_text = translator.translate(text)
+            print(f"Fallback translated text to {target_language}: {translated_text[:50]}...")
             return translated_text
-            
+
         except Exception as e:
             print(f"Translation error: {e}")
             return None

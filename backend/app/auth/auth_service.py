@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from fastapi import HTTPException, status
 from datetime import timedelta
 from ..models.database_models import User
@@ -9,10 +10,16 @@ class AuthService:
     def __init__(self, db: Session):
         self.db = db
 
+    def _normalize_email(self, email: str) -> str:
+        # Avoid login failures due to casing or stray whitespace.
+        return (email or "").strip().lower()
+
     def create_user(self, user: UserCreate) -> User:
         """Create a new user"""
+        email = self._normalize_email(user.email)
+
         # Check if user already exists
-        db_user = self.db.query(User).filter(User.email == user.email).first()
+        db_user = self.db.query(User).filter(func.lower(User.email) == email).first()
         if db_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -22,7 +29,7 @@ class AuthService:
         # Create new user
         hashed_password = get_password_hash(user.password)
         db_user = User(
-            email=user.email,
+            email=email,
             hashed_password=hashed_password
         )
         
@@ -33,7 +40,8 @@ class AuthService:
 
     def authenticate_user(self, user: UserLogin) -> User:
         """Authenticate a user"""
-        db_user = self.db.query(User).filter(User.email == user.email).first()
+        email = self._normalize_email(user.email)
+        db_user = self.db.query(User).filter(func.lower(User.email) == email).first()
         if not db_user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

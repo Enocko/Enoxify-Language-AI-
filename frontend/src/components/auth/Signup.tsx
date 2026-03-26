@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Hero } from '../ui/helix-hero';
+import { API_BASE_URL } from '../../api';
 
 interface SignupProps {
   onSignup: (token: string, userEmail: string) => void;
@@ -33,7 +34,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/auth/signup', {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,7 +45,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
       if (response.ok) {
         const data = await response.json();
         // After successful signup, automatically log in
-        const loginResponse = await fetch('http://localhost:8000/auth/login', {
+        const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

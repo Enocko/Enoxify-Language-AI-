@@ -46,9 +46,15 @@ app = FastAPI(
 )
 
 # CORS middleware
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_env.strip():
+    allowed_origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+else:
+    allowed_origins = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:8000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:8000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -227,7 +233,10 @@ async def process_document(
             
     except Exception as e:
         print(f"Error in document processing: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        message = str(e)
+        if "Could not extract text from document" in message or "Legacy .doc files are not supported" in message:
+            raise HTTPException(status_code=400, detail=message)
+        raise HTTPException(status_code=500, detail=message)
 
 @app.get("/download/{file_path:path}")
 async def download_file(

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../api';
 
 interface SimplificationResult {
   originalText: string;
@@ -13,6 +14,7 @@ const TextSimplifier = () => {
   const [readingLevel, setReadingLevel] = useState('elementary');
   const [result, setResult] = useState<SimplificationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleExampleClick = (example: string) => {
     setText(example);
@@ -23,8 +25,9 @@ const TextSimplifier = () => {
     if (!text.trim()) return;
 
     setIsLoading(true);
+    setError(null);
     try {
-      const response = await fetch('http://localhost:8000/simplify-text', {
+      const response = await fetch(`${API_BASE_URL}/simplify-text`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,10 +47,11 @@ const TextSimplifier = () => {
           readingLevel: readingLevel,
         });
       } else {
-        console.error('Failed to simplify text');
+        const errorData = await response.json().catch(() => null);
+        setError(errorData?.detail || 'Failed to simplify text');
       }
     } catch (error) {
-      console.error('Error:', error);
+      setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -129,6 +133,11 @@ const TextSimplifier = () => {
       </div>
 
       {/* Results */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+          {error}
+        </div>
+      )}
       {result && (
         <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
           <div className="text-center">

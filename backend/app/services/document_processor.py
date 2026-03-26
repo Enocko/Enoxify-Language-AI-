@@ -7,6 +7,13 @@ from docx import Document
 import openai
 from PIL import Image
 import pytesseract
+import io
+import shutil
+
+try:
+    import fitz  # PyMuPDF
+except Exception:
+    fitz = None
 
 class DocumentProcessor:
     def __init__(self):
@@ -128,21 +135,67 @@ class DocumentProcessor:
     async def _extract_from_pdf(self, file_path: str) -> str:
         """Extract text from PDF files"""
         try:
-            text = ""
+            text_parts = []
             with open(file_path, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
                 
                 for page_num in range(len(pdf_reader.pages)):
                     page = pdf_reader.pages[page_num]
-                    text += page.extract_text() + "\n"
+                    page_text = page.extract_text() or ""
+                    if page_text.strip():
+                        text_parts.append(page_text.strip())
             
-            return text.strip()
+            extracted = "\n".join(text_parts).strip()
+            if extracted:
+                return extracted
+
+            # Fallback: OCR scanned PDFs (image-based pages).
+            ocr_text = await self._extract_from_pdf_with_ocr(file_path)
+            if ocr_text and ocr_text.strip():
+                return ocr_text.strip()
+
+            # Provide a helpful hint for the common failure case.
+            if shutil.which("tesseract") is None:
+                raise Exception(
+                    "Could not extract text from document. This PDF may be scanned/image-based. "
+                    "OCR requires the system 'tesseract' binary (not installed)."
+                )
+            raise Exception("Could not extract text from document")
         except Exception as e:
             raise Exception(f"PDF extraction error: {str(e)}")
+
+    async def _extract_from_pdf_with_ocr(self, file_path: str) -> str:
+        """Fallback OCR for image-based/scanned PDFs using PyMuPDF + Tesseract."""
+        if fitz is None:
+            return ""
+
+        if shutil.which("tesseract") is None:
+            return ""
+
+        text_parts = []
+        try:
+            doc = fitz.open(file_path)
+            for page in doc:
+                # Render page to image for OCR.
+                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                img_bytes = pix.tobytes("png")
+                image = Image.open(io.BytesIO(img_bytes))
+                page_text = pytesseract.image_to_string(image)
+                if page_text and page_text.strip():
+                    text_parts.append(page_text.strip())
+            doc.close()
+        except Exception:
+            return ""
+
+        return "\n".join(text_parts).strip()
     
     async def _extract_from_word(self, file_path: str) -> str:
         """Extract text from Word documents"""
         try:
+            # python-docx supports .docx, not legacy .doc binaries.
+            if file_path.lower().endswith(".doc"):
+                raise ValueError("Legacy .doc files are not supported. Please convert to .docx and try again.")
+
             doc = Document(file_path)
             text = ""
             
@@ -157,6 +210,8 @@ class DocumentProcessor:
                     text += "\n"
             
             return text.strip()
+        except ValueError:
+            raise
         except Exception as e:
             raise Exception(f"Word document extraction error: {str(e)}")
     

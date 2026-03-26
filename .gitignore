@@ -59,6 +59,10 @@ pids
 *.seed
 *.pid.lock
 
+# Local auth DB (contains user accounts/password hashes)
+backend/users.db
+users.db
+
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
@@ -71,6 +75,9 @@ jspm_packages/
 
 # Optional npm cache directory
 .npm
+
+# Frontend npm cache used in this repo
+frontend/npm-cache/
 
 # Optional eslint cache
 .eslintcache

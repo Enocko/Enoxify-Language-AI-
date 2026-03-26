@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Mic, Play, Pause, Download, Square, Upload } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../api';
 
 interface STTResult {
   transcript: string;
@@ -334,7 +335,7 @@ const SpeechToText: React.FC = () => {
       formData.append('audio_file', audioFile);
 
       console.log('Sending request to backend...');
-      const response = await fetch('http://localhost:8000/speech-to-text', {
+      const response = await fetch(`${API_BASE_URL}/speech-to-text`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
