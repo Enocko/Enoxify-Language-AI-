@@ -1,6 +1,7 @@
 import os
 import tempfile
 import time
+import subprocess
 from typing import Dict, Any, Optional
 import speech_recognition as sr
 import azure.cognitiveservices.speech as speechsdk
@@ -24,6 +25,54 @@ class SpeechToText:
                 self.google_client = speech.SpeechClient()
             except Exception:
                 pass
+
+    def _get_input_extension(self, audio_file: Any) -> str:
+        """
+        Best-effort detection of the uploaded audio extension.
+        UploadFile.filename is usually set by the frontend.
+        """
+        filename = getattr(audio_file, "filename", "") or ""
+        ext = os.path.splitext(filename)[1].lower()
+        if ext:
+            return ext
+
+        content_type = (getattr(audio_file, "content_type", "") or "").lower()
+        if "webm" in content_type:
+            return ".webm"
+        if "mp4" in content_type:
+            return ".mp4"
+        if "ogg" in content_type:
+            return ".ogg"
+        if "mpeg" in content_type or "mp3" in content_type:
+            return ".mp3"
+        if "wav" in content_type:
+            return ".wav"
+        return ".webm"
+
+    def _convert_to_wav_16k_mono(self, input_path: str, output_path: str) -> None:
+        """
+        Convert any supported input format to a WAV file (16kHz, mono).
+        This avoids issues where we previously saved non-WAV bytes to a `.wav` file.
+        """
+        # ffmpeg should be installed in the backend Docker image.
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                input_path,
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "-f",
+                "wav",
+                output_path,
+            ],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
     
     async def transcribe(self, audio_file, language: str = "en-US", include_timestamps: bool = True) -> Dict[str, Any]:
         """
@@ -58,32 +107,56 @@ class SpeechToText:
         start_time = time.time()
         
         try:
-            # Save uploaded file temporarily
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-            temp_file.write(audio_file.file.read())
-            temp_file.close()
+            # Save uploaded file temporarily (keep the real extension),
+            # then convert to WAV for downstream services.
+            input_ext = self._get_input_extension(audio_file)
+            temp_input = tempfile.NamedTemporaryFile(delete=False, suffix=input_ext)
+            temp_input.write(audio_file.file.read())
+            temp_input.close()
+
+            temp_wav = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+            temp_wav.close()
+
+            try:
+                self._convert_to_wav_16k_mono(temp_input.name, temp_wav.name)
+            except Exception as conv_err:
+                # If conversion fails, fall back to using the raw input path.
+                # Some services may still be able to handle the original format.
+                print(f"DEBUG: ffmpeg conversion failed, using original input. Error: {conv_err}")
+                temp_wav_path = temp_input.name
+            else:
+                temp_wav_path = temp_wav.name
             
             # Try different transcription services in order of preference
             result = None
             
             # Try Azure Speech Services first (best for timestamps)
             if self.azure_speech_key and include_timestamps:
-                result = await self._transcribe_with_azure(temp_file.name, language)
+                result = await self._transcribe_with_azure(temp_wav_path, language)
             
             # Try Google Cloud Speech if Azure failed or timestamps not needed
             if not result and self.google_client:
-                result = await self._transcribe_with_google(temp_file.name, language, include_timestamps)
+                result = await self._transcribe_with_google(temp_wav_path, language, include_timestamps)
             
             # Fallback to OpenAI Whisper
             if not result and self.openai_api_key:
-                result = await self._transcribe_with_openai(temp_file.name, language)
+                result = await self._transcribe_with_openai(temp_wav_path, language)
             
             # Final fallback to local speech recognition
             if not result:
-                result = await self._transcribe_locally(temp_file.name, language)
+                result = await self._transcribe_locally(temp_wav_path, language)
             
-            # Clean up temp file
-            os.unlink(temp_file.name)
+            # Clean up temp files
+            try:
+                os.unlink(temp_input.name)
+            except Exception:
+                pass
+            try:
+                # Only unlink temp_wav if it exists and is different from temp_input
+                if temp_wav.name != temp_input.name:
+                    os.unlink(temp_wav.name)
+            except Exception:
+                pass
             
             if not result:
                 raise Exception("All transcription services failed")
@@ -96,7 +169,11 @@ class SpeechToText:
         except Exception as e:
             # Clean up temp file on error
             try:
-                os.unlink(temp_file.name)
+                # These names exist only if created.
+                if "temp_input" in locals():
+                    os.unlink(temp_input.name)
+                if "temp_wav" in locals():
+                    os.unlink(temp_wav.name)
             except:
                 pass
             raise Exception(f"Error transcribing audio: {str(e)}")

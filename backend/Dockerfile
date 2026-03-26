@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     g++ \
     libmagic1 \
     tesseract-ocr \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
