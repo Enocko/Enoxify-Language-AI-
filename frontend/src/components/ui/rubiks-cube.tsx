@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { PerspectiveCamera, useHelper } from "@react-three/drei";
+import { PerspectiveCamera } from "@react-three/drei";
 import { useThree, useFrame } from "@react-three/fiber";
 import { SpotLight, useDepthBuffer } from '@react-three/drei';
 import * as THREE from 'three';
@@ -35,7 +35,7 @@ const RubiksCubeModel = forwardRef<RubiksCubeRef>((props, ref) => {
   const isResizingRef = useRef(false);
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const [size, setSize] = useState(0.8);
+  const [size] = useState(0.8);
   const [cubes, setCubes] = useState<Cube[]>([]);
   const [isVisible, setIsVisible] = useState(true);
   const [deviceSettings, setDeviceSettings] = useState(() => {
@@ -160,7 +160,7 @@ const RubiksCubeModel = forwardRef<RubiksCubeRef>((props, ref) => {
       isResizingRef.current = false;
     }, 150);
     
-  }, [resetCube]);
+  }, []);
 
   useEffect(() => {
     handleViewportChange();
@@ -532,7 +532,7 @@ function SceneContent() {
     frames: 1
   });
   
-  const [time, setTime] = useState(0);
+  const [, setTime] = useState(0);
   useFrame((state) => {
     setTime(state.clock.getElapsedTime());
   });

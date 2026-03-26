@@ -43,7 +43,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        await response.json();
         // After successful signup, automatically log in
         const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
           method: 'POST',

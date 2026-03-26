@@ -11,10 +11,18 @@ interface TTSResult {
   language: string;
 }
 
+const voiceOptions = [
+  { id: 'us_english', value: 'neutral', label: '🇺🇸 US English', description: 'American English accent', language: 'en-US' },
+  { id: 'uk_english', value: 'neutral', label: '🇬🇧 UK English', description: 'British English accent', language: 'en-GB' },
+  { id: 'spanish', value: 'neutral', label: '🇪🇸 Spanish', description: 'Speaks in Spanish language', language: 'es' },
+  { id: 'french', value: 'neutral', label: '🇫🇷 French', description: 'Speaks in French language', language: 'fr' },
+  { id: 'german', value: 'neutral', label: '🇩🇪 German', description: 'Speaks in German language', language: 'de' }
+];
+
 const TextToSpeech: React.FC = () => {
   const { token } = useAuth();
   const [text, setText] = useState('');
-  const [voice, setVoice] = useState('neutral'); // Voice type for backend (male, female, neutral)
+  const [voice] = useState('neutral'); // Voice type for backend (male, female, neutral)
   const [selectedVoiceId, setSelectedVoiceId] = useState('us_english'); // New state for dropdown value
   const [selectedLanguage, setSelectedLanguage] = useState('en-US'); // Language code for backend
   const [speed, setSpeed] = useState(1);
@@ -24,14 +32,6 @@ const TextToSpeech: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioElement = useRef<HTMLAudioElement>(null);
 
-  const voiceOptions = [
-    { id: 'us_english', value: 'neutral', label: '🇺🇸 US English', description: 'American English accent', language: 'en-US' },
-    { id: 'uk_english', value: 'neutral', label: '🇬🇧 UK English', description: 'British English accent', language: 'en-GB' },
-    { id: 'spanish', value: 'neutral', label: '🇪🇸 Spanish', description: 'Speaks in Spanish language', language: 'es' },
-    { id: 'french', value: 'neutral', label: '🇫🇷 French', description: 'Speaks in French language', language: 'fr' },
-    { id: 'german', value: 'neutral', label: '🇩🇪 German', description: 'Speaks in German language', language: 'de' }
-  ];
-
   // Set initial language on mount
   useEffect(() => {
     const selectedOption = voiceOptions.find(option => option.id === selectedVoiceId);
@@ -39,7 +39,7 @@ const TextToSpeech: React.FC = () => {
       console.log('DEBUG: Initial language setup:', selectedOption.language);
       setSelectedLanguage(selectedOption.language);
     }
-  }, [selectedVoiceId, voiceOptions]); // Add dependencies
+  }, [selectedVoiceId]);
 
   // Update selectedLanguage when selectedVoiceId changes
   useEffect(() => {
@@ -48,7 +48,7 @@ const TextToSpeech: React.FC = () => {
       console.log('DEBUG: Updating selectedLanguage to:', selectedOption.language);
       setSelectedLanguage(selectedOption.language);
     }
-  }, [selectedVoiceId, voiceOptions]); // Remove selectedLanguage to avoid infinite loop
+  }, [selectedVoiceId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -22,7 +22,6 @@ const SpeechToText: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
   const recordedChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -92,7 +91,6 @@ const SpeechToText: React.FC = () => {
       console.log('MediaRecorder.isTypeSupported for this format:', MediaRecorder.isTypeSupported(mimeType));
       
       // Clear any previous chunks
-      setRecordedChunks([]);
       recordedChunksRef.current = []; // Clear the ref
       
       let recorder: MediaRecorder | null = null;
@@ -111,7 +109,6 @@ const SpeechToText: React.FC = () => {
         console.log('Data available:', event.data.size, 'bytes, type:', event.data.type);
         if (event.data.size > 0) {
           // Update both state and ref
-          setRecordedChunks(prev => [...prev, event.data]);
           recordedChunksRef.current = [...recordedChunksRef.current, event.data];
           console.log('Chunk added, total chunks:', recordedChunksRef.current.length);
         } else {
@@ -193,7 +190,6 @@ const SpeechToText: React.FC = () => {
         }
         
         setAudioFile(audioFile);
-        setRecordedChunks([]);
         recordedChunksRef.current = []; // Clear the ref
         setIsRecording(false);
         setRecordingTime(0);
@@ -443,32 +439,26 @@ const SpeechToText: React.FC = () => {
     }
   };
 
-  // Cleanup function for recording timer
-  const cleanupRecording = () => {
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
-    }
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.stop();
-      setIsRecording(false);
-    }
-  };
-
   // Cleanup on component unmount
   React.useEffect(() => {
     return () => {
-      cleanupRecording();
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        setIsRecording(false);
+      }
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
       }
     };
-  }, []);
+  }, [mediaRecorder, isRecording]);
 
   const clearRecording = () => {
     setAudioFile(null);
-    setRecordedChunks([]);
     recordedChunksRef.current = []; // Clear the ref
     setError('');
     setResult(null);
