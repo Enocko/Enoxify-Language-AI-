@@ -311,52 +311,64 @@ class SpeechToText:
             print(f"OpenAI transcription - language parameter: '{language}'")
             
             client = openai.OpenAI(api_key=self.openai_api_key)
-            
-            with open(audio_file_path, "rb") as audio_file:
-                response = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    # Remove language parameter - let Whisper auto-detect
-                    response_format="verbose_json",
-                    timestamp_granularities=["word"]
-                )
-            
-            # Extract timestamps - handle different response formats
-            timestamps = []
-            transcript_text = ""
-            
-            # Try to get text from response
-            if hasattr(response, 'text'):
-                transcript_text = response.text
-            elif hasattr(response, 'words') and response.words:
-                # If we have words but no text, construct text from words
-                transcript_text = " ".join([word.text for word in response.words])
-            
-            # Extract timestamps if available
-            if hasattr(response, 'words') and response.words:
-                for word in response.words:
-                    if hasattr(word, 'text') and hasattr(word, 'start') and hasattr(word, 'end'):
-                        timestamps.append({
-                            "word": word.text,
-                            "start": word.start,
-                            "end": word.end,
-                            "confidence": 1.0
-                        })
-            
-            # Ensure we have text
-            if not transcript_text:
-                print(f"Warning: No transcript text found in response. Response type: {type(response)}")
-                print(f"Response attributes: {dir(response)}")
-                if hasattr(response, 'words'):
-                    print(f"Words: {response.words}")
-                transcript_text = "Audio transcribed successfully"
-            
-            return {
-                "text": transcript_text,
-                "timestamps": timestamps,
-                "confidence": 0.9  # Whisper doesn't provide confidence scores
-            }
-            
+
+            # First try detailed output with word timestamps.
+            try:
+                with open(audio_file_path, "rb") as audio_file:
+                    response = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=audio_file,
+                        response_format="verbose_json",
+                        timestamp_granularities=["word"]
+                    )
+
+                timestamps = []
+                transcript_text = ""
+
+                if hasattr(response, "text") and response.text:
+                    transcript_text = response.text
+                elif hasattr(response, "words") and response.words:
+                    transcript_text = " ".join([word.text for word in response.words if hasattr(word, "text")])
+
+                if hasattr(response, "words") and response.words:
+                    for word in response.words:
+                        if hasattr(word, "text") and hasattr(word, "start") and hasattr(word, "end"):
+                            timestamps.append({
+                                "word": word.text,
+                                "start": word.start,
+                                "end": word.end,
+                                "confidence": 1.0
+                            })
+
+                if transcript_text:
+                    return {
+                        "text": transcript_text,
+                        "timestamps": timestamps,
+                        "confidence": 0.9
+                    }
+            except Exception as detailed_err:
+                print(f"OpenAI detailed transcription failed, retrying basic mode: {detailed_err}")
+
+            # Fallback: basic text response (more compatible across SDK/API variations).
+            try:
+                with open(audio_file_path, "rb") as audio_file:
+                    basic_response = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=audio_file,
+                        response_format="text"
+                    )
+
+                transcript_text = str(basic_response).strip()
+                if transcript_text:
+                    return {
+                        "text": transcript_text,
+                        "timestamps": [],
+                        "confidence": 0.9
+                    }
+            except Exception as basic_err:
+                print(f"OpenAI basic transcription failed: {basic_err}")
+
+            return None
         except Exception as e:
             print(f"OpenAI STT error: {e}")
             return None
